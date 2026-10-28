@@ -1,0 +1,19 @@
+﻿version: '3.8'
+
+services:
+  postgres-vector:
+    image: pgvector/pgvector:pg16
+    container_name: ragdemo_pgvector
+    environment:
+      POSTGRES_DB: ragdemodb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  pgvector_data:
+  
