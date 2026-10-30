@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RAGDemo.Domain.Entities;
@@ -40,8 +41,14 @@ public sealed class RagInteractionConfiguration : IEntityTypeConfiguration<RagIn
             arr => arr.ToList()
         );
 
+        var chunkIdsComparer = new ValueComparer<IReadOnlyList<long>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
+        );
+
         builder.Property(r => r.RetrievedChunkIds)
-            .HasConversion(chunkIdsConverter)
+            .HasConversion(chunkIdsConverter, chunkIdsComparer)
             .HasColumnType("bigint[]")
             .IsRequired();
 
@@ -61,11 +68,18 @@ public sealed class RagInteractionConfiguration : IEntityTypeConfiguration<RagIn
             metrics => JsonSerializer.Serialize(metrics, JsonSerializerOptions.Default),
             json => string.IsNullOrWhiteSpace(json)
                 ? Array.Empty<EvaluationMetric>()
-                : JsonSerializer.Deserialize<List<EvaluationMetric>>(json, JsonSerializerOptions.Default) ?? new List<EvaluationMetric>()
+                : JsonSerializer.Deserialize<List<EvaluationMetric>>(json, JsonSerializerOptions.Default) ??
+                  new List<EvaluationMetric>()
+        );
+
+        var metricsComparer = new ValueComparer<IReadOnlyList<EvaluationMetric>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
         );
 
         builder.Property(r => r.EvaluationMetrics)
-            .HasConversion(metricsConverter)
+            .HasConversion(metricsConverter, metricsComparer)
             .HasColumnType("jsonb")
             .IsRequired();
 
